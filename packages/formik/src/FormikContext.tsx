@@ -1,22 +1,40 @@
 import * as React from 'react';
 import { FormikContextType } from './types';
 import invariant from 'tiny-warning';
+import { createStore } from 'zustand/vanilla';
+import { useStore } from 'zustand';
 
-export const FormikContext = React.createContext<FormikContextType<any>>(
-  undefined as any
+export const formikStore = createStore<FormikContextType<any> | undefined>(() =>
+  undefined
 );
-FormikContext.displayName = 'FormikContext';
 
-export const FormikProvider = FormikContext.Provider;
-export const FormikConsumer = FormikContext.Consumer;
+export function FormikProvider<Values>({
+  value,
+  children,
+}: {
+  value: FormikContextType<Values>;
+  children: React.ReactNode;
+}) {
+  React.useLayoutEffect(() => {
+    formikStore.setState(value);
+  }, [value]);
+  return <>{children}</>;
+}
 
 export function useFormikContext<Values>() {
-  const formik = React.useContext<FormikContextType<Values>>(FormikContext);
+  const formik = useStore(formikStore) as FormikContextType<Values> | undefined;
 
   invariant(
     !!formik,
     `Formik context is undefined, please verify you are calling useFormikContext() as child of a <Formik> component.`
   );
 
-  return formik;
+  return formik as FormikContextType<Values>;
 }
+
+export const FormikConsumer: React.FC<{
+  children: (formik: FormikContextType<any>) => React.ReactNode;
+}> = ({ children }) => {
+  const formik = useStore(formikStore);
+  return <>{formik ? children(formik) : null}</>;
+};
